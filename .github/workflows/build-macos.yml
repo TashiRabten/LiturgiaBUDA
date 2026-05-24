@@ -19,7 +19,8 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          flutter-version: '3.24.0'  # ajuste se precisar versão diferente
+          # Pubspec requer Dart ^3.12 → Flutter ≥ 3.44
+          flutter-version: '3.44.x'
           cache: true
 
       - name: Flutter doctor
