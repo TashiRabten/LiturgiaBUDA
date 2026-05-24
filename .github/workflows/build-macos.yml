@@ -6,6 +6,9 @@ on:
     tags: ['v*']
   workflow_dispatch:  # permite rodar manualmente pela aba Actions
 
+permissions:
+  contents: write  # necessário pra criar/anexar Release em tags v*
+
 jobs:
   build:
     runs-on: macos-14  # Apple Silicon, mas builda universal (Intel + ARM)
