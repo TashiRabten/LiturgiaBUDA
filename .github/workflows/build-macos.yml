@@ -33,14 +33,23 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
           mkdir -p lib/config
-          cat > lib/config/keys.dart << EOF
-          // Gerado automaticamente pelo workflow — NÃO commitar.
-          class SupabaseKeys {
-            static const String supabaseUrl = '${SUPABASE_URL}';
-            static const String supabaseAnonKey = '${SUPABASE_ANON_KEY}';
-            static const String supabaseServiceKey = '${SUPABASE_SERVICE_KEY}';
-          }
-          EOF
+          python3 <<'PYEOF'
+          import os
+          url = os.environ['SUPABASE_URL'].strip()
+          anon = os.environ['SUPABASE_ANON_KEY'].strip()
+          service = os.environ['SUPABASE_SERVICE_KEY'].strip()
+          content = (
+              "// Gerado automaticamente pelo workflow — NAO commitar.\n"
+              "class SupabaseKeys {\n"
+              f"  static const String supabaseUrl = '{url}';\n"
+              f"  static const String supabaseAnonKey = '{anon}';\n"
+              f"  static const String supabaseServiceKey = '{service}';\n"
+              "}\n"
+          )
+          with open('lib/config/keys.dart', 'w', encoding='utf-8') as f:
+              f.write(content)
+          print(f'keys.dart gerado ({len(content)} chars)')
+          PYEOF
 
       - name: Pub get
         run: flutter pub get
