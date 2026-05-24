@@ -64,9 +64,54 @@ Login com email + senha via Supabase Auth.
 
 Funções:
 - Inserir textos por fluxo / período / dia / sessão
-- Upload de arquivos de texto em lote
+- Upload de arquivos em lote (.pdf, .docx, .txt)
 - Editar e remover textos existentes
 - Ver progresso do conteúdo inserido
+
+### Upload em Lote — Convenções de Nome
+
+**Destino: Leituras** (tabela `textos`)
+```
+{dia}_{sessao}.{ext}
+```
+Exemplos: `001_manha.pdf`, `045_noite.docx`, `230_madrugada.txt`
+
+**Destino: Textos Fixos** (tabela `textos_fixos`)
+```
+{tipo}_{nome}.{ext}
+```
+Tipos válidos: `refugio`, `dedicatoria`, `invitatório`, `sutra`, `sadhana`
+
+Exemplos:
+- `refugio_principal.pdf` → Prece de Refúgio
+- `dedicatoria_padrao.docx` → Prece Dedicatória
+- `sutra_coracao.pdf` → Sutra do Coração
+- `sutra_tresjoias.pdf` → Sutra das Três Joias
+- `sadhana_gandenlhagyalma.docx` → Ganden Lha Gyalma
+
+### Extração de Conteúdo
+
+| Formato | Preserva formatação? | Como |
+|---|---|---|
+| `.docx` | ✅ Sim | Parse XML — negrito, itálico, headings → Markdown |
+| `.pdf`  | ⚠️ Parcial | Texto puro com parágrafos; sem bold/itálico confiável |
+| `.txt`  | ❌ Não | Texto cru |
+
+O conteúdo é salvo em **Markdown** na coluna `conteudo` e renderizado com `markdown_widget` na tela de leitura.
+
+### Constraints únicas necessárias no Supabase
+
+Para upload com substituição (re-upload do mesmo arquivo atualiza ao invés de duplicar):
+
+```sql
+alter table public.textos
+  add constraint textos_fluxo_periodo_dia_sessao_unique
+  unique (fluxo_id, periodo, dia, sessao);
+
+alter table public.textos_fixos
+  add constraint textos_fixos_tipo_nome_unique
+  unique (tipo, nome);
+```
 
 ---
 
