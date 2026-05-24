@@ -26,6 +26,22 @@ jobs:
       - name: Flutter doctor
         run: flutter doctor -v
 
+      - name: Gera lib/config/keys.dart com secrets
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          mkdir -p lib/config
+          cat > lib/config/keys.dart << EOF
+          // Gerado automaticamente pelo workflow — NÃO commitar.
+          class SupabaseKeys {
+            static const String supabaseUrl = '${SUPABASE_URL}';
+            static const String supabaseAnonKey = '${SUPABASE_ANON_KEY}';
+            static const String supabaseServiceKey = '${SUPABASE_SERVICE_KEY}';
+          }
+          EOF
+
       - name: Pub get
         run: flutter pub get
 

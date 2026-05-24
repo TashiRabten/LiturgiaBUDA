@@ -22,6 +22,24 @@ jobs:
           flutter-version: '3.44.x'
           cache: true
 
+      - name: Gera lib/config/keys.dart com secrets
+        shell: pwsh
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          New-Item -ItemType Directory -Force -Path lib\config | Out-Null
+          $content = @"
+          // Gerado automaticamente pelo workflow — NÃO commitar.
+          class SupabaseKeys {
+            static const String supabaseUrl = '$env:SUPABASE_URL';
+            static const String supabaseAnonKey = '$env:SUPABASE_ANON_KEY';
+            static const String supabaseServiceKey = '$env:SUPABASE_SERVICE_KEY';
+          }
+          "@
+          Set-Content -Path lib\config\keys.dart -Value $content -Encoding UTF8
+
       - name: Pub get
         run: flutter pub get
 
