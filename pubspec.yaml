@@ -66,6 +66,11 @@ flutter_launcher_icons:
     generate: true
     image_path: "assets/images/BUDA.png"
     icon_size: 256
+  web:
+    generate: true
+    image_path: "assets/images/BUDA.png"
+    background_color: "#88A9CC"
+    theme_color: "#CC3300"
   android:
     generate: false   # ative quando montar o build Android
   ios:
