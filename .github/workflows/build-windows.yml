@@ -1,0 +1,54 @@
+name: Build Windows
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          flutter-version: '3.24.0'
+          cache: true
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: Build Windows (Release)
+        run: flutter build windows --release
+
+      - name: Zipa o build
+        shell: pwsh
+        run: |
+          $src = "build\windows\x64\runner\Release"
+          $zip = "LiturgiaBUDA-Windows.zip"
+          Compress-Archive -Path "$src\*" -DestinationPath $zip -Force
+          Get-Item $zip | Select-Object Name, Length
+
+      - name: Upload artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: LiturgiaBUDA-Windows-${{ github.run_number }}
+          path: LiturgiaBUDA-Windows.zip
+          retention-days: 30
+
+      - name: Release (só em tags)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: LiturgiaBUDA-Windows.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
