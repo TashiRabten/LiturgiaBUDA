@@ -52,15 +52,13 @@ void main() async {
 
 class LiturgiaBudaApp extends StatelessWidget {
   const LiturgiaBudaApp({super.key});
-
-      @override
-      Widget build(BuildContext context) {
-        return UpgradeAlert(
+    return UpgradeAlert(
       upgrader: Upgrader(
-        appcastConfig: AppcastConfiguration(
-          url: 'https://raw.githubusercontent.com/TashiRabten/LiturgiaBUDA/main/appcast.xml',
+        storeController: UpgraderStoreController(
+          onWindows: () => UpgraderAppcastStore(
+            appcastURL: 'https://raw.githubusercontent.com/TashiRabten/LiturgiaBUDA/main/appcast.xml',
+          ),
         ),
-      ),
     child: MaterialApp(
         title: 'LiturgiaBUDA',
         debugShowCheckedModeBanner: false,
