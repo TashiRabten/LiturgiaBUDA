@@ -52,19 +52,26 @@ void main() async {
 
 class LiturgiaBudaApp extends StatelessWidget {
   const LiturgiaBudaApp({super.key});
+
+  static final _upgrader = Upgrader(
+    storeController: UpgraderStoreController(
+      onWindows: () => UpgraderAppcastStore(
+        appcastURL:
+            'https://raw.githubusercontent.com/TashiRabten/LiturgiaBUDA/main/appcast.xml',
+      ),
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
     return UpgradeAlert(
-      upgrader: Upgrader(
-        storeController: UpgraderStoreController(
-          onWindows: () => UpgraderAppcastStore(
-            appcastURL: 'https://raw.githubusercontent.com/TashiRabten/LiturgiaBUDA/main/appcast.xml',
-          ),
-        ),
-    child: MaterialApp(
+      upgrader: _upgrader,
+      child: MaterialApp(
         title: 'LiturgiaBUDA',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF8B4513), // marrom budista
+            seedColor: const Color(0xFF8B4513),
             brightness: Brightness.light,
           ),
           useMaterial3: true,
