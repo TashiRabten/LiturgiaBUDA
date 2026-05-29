@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>LiturgiaBUDA</title>
+    <item>
+      <title>Versão 1.0.1</title>
+      <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>10.0</sparkle:minimumSystemVersion>
+      <enclosure
+        url="https://github.com/TashiRabten/LiturgiaBUDA/releases/latest/download/LiturgiaBUDA_setup.exe"
+        sparkle:version="1.0.1"
+        type="application/octet-stream"
+      />
+    </item>
+  </channel>
+</rss>

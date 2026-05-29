@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:upgrader/upgrader.dart';
 import 'config/keys.dart';
 import 'services/database_service.dart';
 import 'services/sync_service.dart';
@@ -54,26 +55,33 @@ class LiturgiaBudaApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'LiturgiaBUDA',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF8B4513), // marrom budista
-          brightness: Brightness.light,
+    return UpgradeAlert(
+      upgrader: Upgrader(
+        storeController: UpgraderAppcastStoreController(
+          appcastURL: 'https://raw.githubusercontent.com/TashiRabten/LiturgiaBUDA/main/appcast.xml',
         ),
-        useMaterial3: true,
-        fontFamily: 'Serif',
       ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF8B4513),
-          brightness: Brightness.dark,
+      child: MaterialApp(
+        title: 'LiturgiaBUDA',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF8B4513), // marrom budista
+            brightness: Brightness.light,
+          ),
+          useMaterial3: true,
+          fontFamily: 'Serif',
         ),
-        useMaterial3: true,
+        darkTheme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF8B4513),
+            brightness: Brightness.dark,
+          ),
+          useMaterial3: true,
+        ),
+        themeMode: ThemeMode.system,
+        home: const HomeScreen(),
       ),
-      themeMode: ThemeMode.system,
-      home: const HomeScreen(),
     );
   }
 }
