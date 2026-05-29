@@ -1,0 +1,30 @@
+# Força LF em arquivos de texto pra compatibilidade entre Windows ↔ Mac/Linux.
+# Sem isso, arquivos commitados do Windows chegam ao Mac com CRLF, e o YAML
+# parser do Dart pula seções silenciosamente (ex: pubspec.yaml `assets:`).
+
+* text=auto eol=lf
+
+# Binários — não tocar
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.pkg binary
+*.zip binary
+*.tar binary
+*.gz binary
+*.pdf binary
+*.docx binary
+*.db binary
+*.sqlite binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary

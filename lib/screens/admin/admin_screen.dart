@@ -2057,13 +2057,26 @@ class _EditarTabState extends State<_EditarTab> {
   bool _loading = false;
   bool _buscado = false;
 
+  // Seleção múltipla: ids marcados + se o modo de seleção está ativo.
+  final Set<int> _selecionados = {};
+  bool _modoSelecao = false;
+
   bool get _isLeitura => _destino == _Destino.leituras;
   String get _tabela => _isLeitura ? 'textos' : 'textos_fixos';
+
+  @override
+  void initState() {
+    super.initState();
+    // Mostra resultados de imediato (leituras do fluxo principal) — sem exigir
+    // um clique em "Buscar". A busca também roda ao mudar qualquer filtro.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _buscar());
+  }
 
   Future<void> _buscar() async {
     setState(() {
       _loading = true;
       _buscado = false;
+      _selecionados.clear();
     });
     try {
       List<dynamic> data;
@@ -2651,6 +2664,191 @@ class _EditarTabState extends State<_EditarTab> {
     }
   }
 
+  // Remove TODOS os registros atualmente listados — usa exatamente o mesmo
+  // filtro da busca (fluxo + sessão para leituras; tipo para textos fixos),
+  // então o que é apagado é precisamente o que está visível na lista.
+  Future<void> _removerTodos() async {
+    final n = _textos.length;
+    if (n == 0) return;
+
+    final String filtroDesc;
+    if (_isLeitura) {
+      final nomeFluxo = _fluxos.firstWhere(
+        (f) => f['id'] == _fluxoId,
+        orElse: () => {'nome': 'Fluxo $_fluxoId'},
+      )['nome'] as String;
+      final sessaoDesc = _sessaoFiltro != null
+          ? 'sessão ${_sessoesLabel[_sessaoFiltro] ?? _sessaoFiltro}'
+          : 'todas as sessões';
+      filtroDesc = '$nomeFluxo · $sessaoDesc';
+    } else {
+      filtroDesc = _tipoFiltro != null ? 'tipo "$_tipoFiltro"' : 'todos os tipos';
+    }
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Remover todos os listados'),
+        content: Text(
+            'Remover os $n texto(s) atualmente listados\n($filtroDesc)?\n\n'
+            'Esta ação não pode ser desfeita.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar')),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style:
+                FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+            child: Text('Remover $n'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true) return;
+
+    setState(() => _loading = true);
+    try {
+      if (_isLeitura) {
+        var q = _supabase.from('textos').delete().eq('fluxo_id', _fluxoId);
+        if (_sessaoFiltro != null) q = q.eq('sessao', _sessaoFiltro!);
+        await q;
+      } else {
+        if (_tipoFiltro != null) {
+          await _supabase
+              .from('textos_fixos')
+              .delete()
+              .eq('tipo', _tipoFiltro!);
+        } else {
+          // Sem filtro de tipo: apaga todos os textos fixos. O Supabase exige
+          // um filtro no delete, então usamos um sempre-verdadeiro (id >= 0).
+          await _supabase.from('textos_fixos').delete().gte('id', 0);
+        }
+      }
+      if (mounted) {
+        _snackOk(context, '$n texto(s) removido(s).');
+        _disparaSync(context);
+        _buscar();
+      }
+    } catch (e) {
+      if (mounted) _snackErro(context, 'Erro ao remover todos: $e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  // Remove apenas os itens marcados (seleção múltipla).
+  Future<void> _removerSelecionados() async {
+    final ids = _selecionados.toList();
+    if (ids.isEmpty) return;
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Remover selecionados'),
+        content: Text(
+            'Remover os ${ids.length} texto(s) selecionado(s)?\n\n'
+            'Esta ação não pode ser desfeita.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar')),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style:
+                FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+            child: Text('Remover ${ids.length}'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true) return;
+
+    setState(() => _loading = true);
+    try {
+      await _supabase.from(_tabela).delete().inFilter('id', ids);
+      if (mounted) {
+        _snackOk(context, '${ids.length} texto(s) removido(s).');
+        _selecionados.clear();
+        _modoSelecao = false;
+        _disparaSync(context);
+        _buscar();
+      }
+    } catch (e) {
+      if (mounted) _snackErro(context, 'Erro ao remover selecionados: $e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  // Barra acima da lista: contagem de resultados + ações (selecionar /
+  // remover selecionados / remover todos).
+  Widget _barraResultados(ColorScheme cs) {
+    final total = _textos.length;
+    final selN = _selecionados.length;
+    final todosMarcados = total > 0 && selN == total;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: cs.outlineVariant)),
+      ),
+      child: Row(
+        children: [
+          Text(
+            _modoSelecao ? '$selN selecionado(s)' : '$total resultado(s)',
+            style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: cs.onSurfaceVariant),
+          ),
+          const Spacer(),
+          if (_modoSelecao) ...[
+            TextButton(
+              onPressed: () => setState(() {
+                if (todosMarcados) {
+                  _selecionados.clear();
+                } else {
+                  _selecionados
+                    ..clear()
+                    ..addAll(_textos.map((t) => t['id'] as int));
+                }
+              }),
+              child: Text(todosMarcados ? 'Limpar' : 'Todos'),
+            ),
+            TextButton.icon(
+              onPressed: (selN == 0 || _loading) ? null : _removerSelecionados,
+              icon: Icon(Icons.delete_outline,
+                  size: 18, color: selN == 0 ? cs.onSurfaceVariant : cs.error),
+              label: Text('Remover ($selN)',
+                  style: TextStyle(
+                      color: selN == 0 ? cs.onSurfaceVariant : cs.error)),
+            ),
+            IconButton(
+              tooltip: 'Sair da seleção',
+              icon: const Icon(Icons.close, size: 20),
+              onPressed: () => setState(() {
+                _modoSelecao = false;
+                _selecionados.clear();
+              }),
+            ),
+          ] else ...[
+            TextButton.icon(
+              onPressed: () => setState(() => _modoSelecao = true),
+              icon: const Icon(Icons.checklist, size: 18),
+              label: const Text('Selecionar'),
+            ),
+            TextButton.icon(
+              onPressed: _loading ? null : _removerTodos,
+              icon: Icon(Icons.delete_sweep_outlined, size: 18, color: cs.error),
+              label:
+                  Text('Remover todos', style: TextStyle(color: cs.error)),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -2682,11 +2880,16 @@ class _EditarTabState extends State<_EditarTab> {
                   ),
                 ],
                 selected: {_destino},
-                onSelectionChanged: (s) => setState(() {
-                  _destino = s.first;
-                  _textos = [];
-                  _buscado = false;
-                }),
+                onSelectionChanged: (s) {
+                  setState(() {
+                    _destino = s.first;
+                    _textos = [];
+                    _buscado = false;
+                    _selecionados.clear();
+                    _modoSelecao = false;
+                  });
+                  _buscar();
+                },
               ),
               const SizedBox(height: 12),
 
@@ -2706,7 +2909,10 @@ class _EditarTabState extends State<_EditarTab> {
                               style: const TextStyle(fontSize: 13)),
                         ))
                             .toList(),
-                        onChanged: (v) => setState(() => _fluxoId = v!),
+                        onChanged: (v) {
+                          setState(() => _fluxoId = v!);
+                          _buscar();
+                        },
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -2726,7 +2932,10 @@ class _EditarTabState extends State<_EditarTab> {
                                 style: const TextStyle(fontSize: 13)),
                           )),
                         ],
-                        onChanged: (v) => setState(() => _sessaoFiltro = v),
+                        onChanged: (v) {
+                          setState(() => _sessaoFiltro = v);
+                          _buscar();
+                        },
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -2779,7 +2988,10 @@ class _EditarTabState extends State<_EditarTab> {
                               child: Text('Sadhana',
                                   style: TextStyle(fontSize: 13))),
                         ],
-                        onChanged: (v) => setState(() => _tipoFiltro = v),
+                        onChanged: (v) {
+                          setState(() => _tipoFiltro = v);
+                          _buscar();
+                        },
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -2802,6 +3014,8 @@ class _EditarTabState extends State<_EditarTab> {
           ),
         ),
 
+        if (_buscado && _textos.isNotEmpty) _barraResultados(colorScheme),
+
         // Lista
         Expanded(
           child: !_buscado
@@ -2812,7 +3026,7 @@ class _EditarTabState extends State<_EditarTab> {
                 Icon(Icons.search,
                     size: 48, color: colorScheme.onSurfaceVariant),
                 const SizedBox(height: 12),
-                Text('Selecione filtros e clique em Buscar.',
+                Text('Use os filtros acima para listar os textos.',
                     style: TextStyle(
                         color: colorScheme.onSurfaceVariant)),
               ],
@@ -2849,19 +3063,45 @@ class _EditarTabState extends State<_EditarTab> {
                 '${t['nome']}  ·  ${(t['tipo'] as String? ?? '').toUpperCase()}';
               }
 
+              final id = t['id'] as int;
+              final sel = _selecionados.contains(id);
+              void alternarSel() => setState(() {
+                    if (sel) {
+                      _selecionados.remove(id);
+                    } else {
+                      _selecionados.add(id);
+                    }
+                  });
+
               return Card(
                 margin: EdgeInsets.zero,
+                color: (_modoSelecao && sel)
+                    ? colorScheme.primaryContainer.withOpacity(0.45)
+                    : null,
                 child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: colorScheme.primaryContainer,
-                    child: Text(
-                      leadingLabel,
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.w600),
-                    ),
-                  ),
+                  // Em modo seleção: toca para marcar. Fora dele: toca para editar.
+                  onTap: _modoSelecao ? alternarSel : () => _editar(t),
+                  onLongPress: _modoSelecao
+                      ? null
+                      : () => setState(() {
+                            _modoSelecao = true;
+                            _selecionados.add(id);
+                          }),
+                  leading: _modoSelecao
+                      ? Checkbox(
+                          value: sel,
+                          onChanged: (_) => alternarSel(),
+                        )
+                      : CircleAvatar(
+                          backgroundColor: colorScheme.primaryContainer,
+                          child: Text(
+                            leadingLabel,
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.w600),
+                          ),
+                        ),
                   title: Text(
                     tituloItem,
                     style: const TextStyle(
@@ -2869,23 +3109,25 @@ class _EditarTabState extends State<_EditarTab> {
                   ),
                   subtitle: Text(previewShort,
                       style: const TextStyle(fontSize: 12)),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon:
-                        const Icon(Icons.edit_outlined, size: 20),
-                        tooltip: 'Editar',
-                        onPressed: () => _editar(t),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.delete_outline,
-                            size: 20, color: colorScheme.error),
-                        tooltip: 'Remover',
-                        onPressed: () => _remover(t),
-                      ),
-                    ],
-                  ),
+                  trailing: _modoSelecao
+                      ? null
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon:
+                                  const Icon(Icons.edit_outlined, size: 20),
+                              tooltip: 'Editar',
+                              onPressed: () => _editar(t),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.delete_outline,
+                                  size: 20, color: colorScheme.error),
+                              tooltip: 'Remover',
+                              onPressed: () => _remover(t),
+                            ),
+                          ],
+                        ),
                 ),
               );
             },

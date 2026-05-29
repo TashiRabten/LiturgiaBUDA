@@ -81,6 +81,16 @@ class _HomeScreenState extends State<HomeScreen>
   late int _paginaAtual;
   late DateTime _dataBase;
 
+  // Switch entre os dois fluxos exibidos no leitor:
+  //   false → Fluxo Principal (id 1): 360 dias em 3 períodos.
+  //   true  → Fluxo Prajñāpāramitā (id 2): 365 dias, ano inteiro, sem período.
+  // Abrir o menu lateral volta sempre ao Fluxo Principal (ver _togglePainel).
+  bool _prajna = false;
+
+  int get _fluxoAtual => _prajna ? 2 : 1;
+  // Prajñāpāramitā não tem período (periodo IS NULL nas linhas da tabela).
+  int? _periodoAtual(DateTime d) => _prajna ? null : _periodoParaData(d);
+
 
   @override
   void initState() {
@@ -124,8 +134,60 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _togglePainel() {
-    setState(() => _painelAberto = !_painelAberto);
+    setState(() {
+      _painelAberto = !_painelAberto;
+      // Abrir o menu lateral volta sempre ao Fluxo Principal: o painel navega
+      // por dia/sessão no contexto do fluxo principal.
+      if (_painelAberto) _prajna = false;
+    });
     _painelAberto ? _painelCtrl.forward() : _painelCtrl.reverse();
+  }
+
+  // Switch Principal ↔ Prajñāpāramitā, exibido logo abaixo do AppBar.
+  Widget _fluxoSwitch() {
+    return Center(
+      child: Container(
+        decoration: BoxDecoration(
+          color: BudaColors.white20,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: BudaColors.white40, width: 1),
+        ),
+        padding: const EdgeInsets.all(2),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _segmentoFluxo('Principal', false),
+            _segmentoFluxo('Prajñāpāramitā', true),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _segmentoFluxo(String label, bool prajnaValue) {
+    final ativo = _prajna == prajnaValue;
+    return GestureDetector(
+      onTap: () {
+        if (_prajna != prajnaValue) setState(() => _prajna = prajnaValue);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+        decoration: BoxDecoration(
+          color: ativo ? BudaColors.gold : Colors.transparent,
+          borderRadius: BorderRadius.circular(17),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: ativo ? FontWeight.w700 : FontWeight.w500,
+            color: ativo ? BudaColors.toolbarBorder : BudaColors.white70,
+            letterSpacing: 0.3,
+          ),
+        ),
+      ),
+    );
   }
 
   void _irParaDia(int idx) {
@@ -162,14 +224,15 @@ class _HomeScreenState extends State<HomeScreen>
                 // ── AppBar refinado ───────────────────
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 6),
+                      horizontal: 12, vertical: 6),
                   child: Row(
                     children: [
+                      // Botão menu
                       GestureDetector(
                         onTap: _togglePainel,
                         child: Container(
-                          width: 38,
-                          height: 38,
+                          width: 36,
+                          height: 36,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: BudaColors.white20,
@@ -183,24 +246,75 @@ class _HomeScreenState extends State<HomeScreen>
                             builder: (_, __) => Icon(
                               _painelAberto ? Icons.close : Icons.menu,
                               color: BudaColors.gold,
-                              size: 18,
+                              size: 17,
                             ),
                           ),
                         ),
                       ),
 
+                      const SizedBox(width: 6),
+
+                      // Seta esquerda + switch + seta direita (centro expansível)
                       Expanded(
-                        child: Center(
-                          child: _DotsIndicador(
-                              total: 7, atual: _paginaAtual),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Seta <
+                            GestureDetector(
+                              onTap: () {
+                                if (_paginaAtual > 0) {
+                                  _pageCtrl.animateToPage(
+                                    _paginaAtual - 1,
+                                    duration: const Duration(milliseconds: 300),
+                                    curve: Curves.easeInOut,
+                                  );
+                                }
+                              },
+                              child: Opacity(
+                                opacity: _paginaAtual > 0 ? 1.0 : 0.25,
+                                child: const Icon(
+                                  Icons.chevron_left,
+                                  color: BudaColors.gold,
+                                  size: 22,
+                                ),
+                              ),
+                            ),
+
+                            // Switch Principal ↔ Prajñāpāramitā
+                            Flexible(child: _fluxoSwitch()),
+
+                            // Seta >
+                            GestureDetector(
+                              onTap: () {
+                                if (_paginaAtual < 6) {
+                                  _pageCtrl.animateToPage(
+                                    _paginaAtual + 1,
+                                    duration: const Duration(milliseconds: 300),
+                                    curve: Curves.easeInOut,
+                                  );
+                                }
+                              },
+                              child: Opacity(
+                                opacity: _paginaAtual < 6 ? 1.0 : 0.25,
+                                child: const Icon(
+                                  Icons.chevron_right,
+                                  color: BudaColors.gold,
+                                  size: 22,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
 
+                      const SizedBox(width: 6),
+
+                      // Botão sync
                       GestureDetector(
                         onTap: () => context.read<SyncService>().sync(),
                         child: Container(
-                          width: 38,
-                          height: 38,
+                          width: 36,
+                          height: 36,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: BudaColors.white20,
@@ -218,7 +332,7 @@ class _HomeScreenState extends State<HomeScreen>
                             ),
                           )
                               : const Icon(Icons.sync,
-                              color: BudaColors.gold, size: 18),
+                              color: BudaColors.gold, size: 17),
                         ),
                       ),
                     ],
@@ -237,6 +351,7 @@ class _HomeScreenState extends State<HomeScreen>
                       return _PaginaDia(
                         data: data,
                         eHoje: eHoje,
+                        prajna: _prajna,
                         sessaoAtual: _sessaoAtual(),
                         diaDoAno: _diaDoAnoParaData(data),
                         periodo: _periodoParaData(data),
@@ -244,10 +359,10 @@ class _HomeScreenState extends State<HomeScreen>
                         onIniciarSessao: (sessao) {
                           LeituraScreen.mostrar(
                             context,
-                            fluxoId: 1,
+                            fluxoId: _fluxoAtual,
                             dia: _diaDoAnoParaData(data),
                             sessao: sessao,
-                            periodo: _periodoParaData(data),
+                            periodo: _periodoAtual(data),
                           );
                         },
                       );
@@ -311,10 +426,10 @@ class _HomeScreenState extends State<HomeScreen>
                     final data = _dataParaPagina(diaIdx);
                     LeituraScreen.mostrar(
                       context,
-                      fluxoId: 1,
+                      fluxoId: _fluxoAtual,
                       dia: _diaDoAnoParaData(data),
                       sessao: sessao,
-                      periodo: _periodoParaData(data),
+                      periodo: _periodoAtual(data),
                     );
                   },
                 ),
@@ -600,6 +715,7 @@ class _PainelLateralState extends State<_PainelLateral> {
 class _PaginaDia extends StatelessWidget {
   final DateTime data;
   final bool eHoje;
+  final bool prajna;
   final String sessaoAtual;
   final int diaDoAno;
   final int periodo;
@@ -609,6 +725,7 @@ class _PaginaDia extends StatelessWidget {
   const _PaginaDia({
     required this.data,
     required this.eHoje,
+    required this.prajna,
     required this.sessaoAtual,
     required this.diaDoAno,
     required this.periodo,
@@ -627,6 +744,16 @@ class _PaginaDia extends StatelessWidget {
     2: '2º Período · Fluxo Principal',
     3: '3º Período · Fluxo Principal',
   };
+
+  // Wording year-round do fluxo Prajñāpāramitā (sem período) vs. os rótulos
+  // por período do fluxo principal.
+  String get _tituloPeriodo =>
+      prajna ? 'PRAJÑĀPĀRAMITĀ' : (_periodoNome[periodo] ?? '').toUpperCase();
+  String get _subFluxo => prajna
+      ? 'Fluxo Prajñāpāramitā · o ano inteiro'
+      : (_periodoFluxo[periodo] ?? '');
+  String get _infoFluxoLabel => prajna ? 'Fluxo Prajñāpāramitā' : 'Fluxo Principal';
+  String get _infoFluxoValor => prajna ? 'Ano inteiro' : '${periodo}º Período';
 
   static const _sessaoNome = {
     'manha':     'Manhã',
@@ -724,7 +851,7 @@ class _PaginaDia extends StatelessWidget {
 
                         // Período · Dia
                         Text(
-                          '${(_periodoNome[periodo] ?? '').toUpperCase()} · DIA $diaDoAno',
+                          '$_tituloPeriodo · DIA $diaDoAno',
                           style: const TextStyle(
                             fontSize: 9,
                             color: textoOuro,
@@ -754,7 +881,7 @@ class _PaginaDia extends StatelessWidget {
                         const SizedBox(height: 5),
 
                         Text(
-                          _periodoFluxo[periodo] ?? '',
+                          _subFluxo,
                           style: const TextStyle(
                             fontSize: 11,
                             color: textoMedio,
@@ -792,7 +919,7 @@ class _PaginaDia extends StatelessWidget {
 
                         // Período em ouro
                         Text(
-                          (_periodoNome[periodo] ?? '').toUpperCase(),
+                          _tituloPeriodo,
                           style: const TextStyle(
                             fontSize: 10,
                             color: textoOuro,
@@ -867,8 +994,8 @@ class _PaginaDia extends StatelessWidget {
                     child: Column(
                       children: [
                         _InfoLinhaCreme(
-                          label: 'Fluxo Principal',
-                          valor: '${periodo}º Período',
+                          label: _infoFluxoLabel,
+                          valor: _infoFluxoValor,
                           textoOuro: textoOuro,
                           textoMedio: textoMedio,
                         ),

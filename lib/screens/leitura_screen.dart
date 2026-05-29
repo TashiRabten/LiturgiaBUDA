@@ -279,11 +279,15 @@ class _LeituraScreenState extends State<LeituraScreen> {
           '— leitura ainda não disponível para esta sessão —',
     ));
 
-    // 5. Sadhana (só se ativa)
-    if (_mostrarSadhana && _sadhana != null) {
+    // 5. Sadhana (só se ativa) — sempre adiciona a secção quando o botão está
+    // ligado, mesmo sem texto cadastrado, usando o mesmo placeholder de
+    // Refúgio/Dedicatória. Antes a secção só aparecia se `_sadhana != null`,
+    // então alternar o botão sem uma sadhana cadastrada não fazia nada visível.
+    if (_mostrarSadhana) {
       lista.add(_Seccao(
         titulo: 'Sadhana',
-        conteudo: _sadhana!['conteudo'],
+        conteudo: (_sadhana?['conteudo'] as String?) ??
+            '— texto ainda não disponível —',
         destaque: true,
       ));
     }
