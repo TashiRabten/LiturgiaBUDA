@@ -56,12 +56,13 @@ jobs:
         run: |
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" LiturgiaBUDA_setup.iss
 
-      - name: Upload artefato
+      - name: Upload artefato (test runs only — releases go to the GitHub Release)
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         uses: actions/upload-artifact@v4
         with:
           name: LiturgiaBUDA-Setup-${{ github.run_number }}
           path: installer\LiturgiaBUDA_setup.exe
-          retention-days: 30
+          retention-days: 1
 
       - name: Release (só em tags)
         if: startsWith(github.ref, 'refs/tags/v')
@@ -73,12 +74,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload artefato
+      - name: Upload artefato (test runs only — releases go to the GitHub Release)
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         uses: actions/upload-artifact@v4
         with:
           name: LiturgiaBUDA-Windows-${{ github.run_number }}
           path: LiturgiaBUDA-Windows.zip
-          retention-days: 30
+          retention-days: 1
 
       - name: Release (só em tags)
         if: startsWith(github.ref, 'refs/tags/v')

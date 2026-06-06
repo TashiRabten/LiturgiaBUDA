@@ -76,12 +76,13 @@ jobs:
 
           ls -lh "$PKG_OUT"
 
-      - name: Upload artefato
+      - name: Upload artefato (test runs only — releases go to the GitHub Release)
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         uses: actions/upload-artifact@v4
         with:
           name: LiturgiaBUDA-macOS-${{ github.run_number }}
           path: LiturgiaBUDA.pkg
-          retention-days: 30
+          retention-days: 1
 
       # Se for uma tag v*, anexa o .pkg na Release do GitHub
       - name: Release (só em tags)
