@@ -79,6 +79,7 @@ jobs:
       - name: Upload artefato (test runs only — releases go to the GitHub Release)
         if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         uses: actions/upload-artifact@v4
+        continue-on-error: true   # account artifact storage may be full; don't fail a green build (test runs only)
         with:
           name: LiturgiaBUDA-macOS-${{ github.run_number }}
           path: LiturgiaBUDA.pkg
