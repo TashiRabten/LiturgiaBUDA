@@ -30,3 +30,19 @@ Name: "{userdesktop}\LiturgiaBUDA"; Filename: "{app}\liturgiabuda.exe"; Tasks: d
 
 [Run]
 Filename: "{app}\liturgiabuda.exe"; Description: "Abrir LiturgiaBUDA"; Flags: nowait postinstall skipifsilent
+; Auto-exclusão do instalador: um cmd oculto e destacado tenta excluir {srcexe}
+; a cada ~2 s por até ~3 min. Enquanto o setup ainda roda, o arquivo está
+; bloqueado e o del falha; assim que o assistente fecha, a exclusão ocorre.
+; Se o usuário cancelar ou demorar além do limite, o instalador apenas
+; permanece em Downloads (comportamento antigo) — nunca é um erro.
+; Protegido por ShouldSelfDelete: só dispara quando o setup roda de uma pasta
+; Downloads, preservando artefatos de build locais e cópias arquivadas.
+Filename: "{cmd}"; Parameters: "/c for /l %i in (1,1,90) do (ping -n 3 127.0.0.1 >nul & del ""{srcexe}"" >nul 2>&1 & if not exist ""{srcexe}"" exit)"; Check: ShouldSelfDelete; Flags: runhidden nowait
+
+[Code]
+// Só auto-excluir quando o setup foi executado de uma pasta Downloads (caminho
+// padrão de download manual e de atualizações). Builds locais ficam intactos.
+function ShouldSelfDelete(): Boolean;
+begin
+  Result := Pos('\downloads\', Lowercase(ExpandConstant('{srcexe}'))) > 0;
+end;
