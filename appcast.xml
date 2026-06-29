@@ -3,12 +3,12 @@
   <channel>
     <title>LiturgiaBUDA</title>
     <item>
-      <title>Versão 1.0.4</title>
-      <sparkle:shortVersionString>1.0.4</sparkle:shortVersionString>
+      <title>Versão 1.0.5</title>
+      <sparkle:shortVersionString>1.0.5</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>10.0</sparkle:minimumSystemVersion>
       <enclosure
         url="https://github.com/TashiRabten/LiturgiaBUDA/releases/latest/download/LiturgiaBUDA_setup.exe"
-        sparkle:version="1.0.4"
+        sparkle:version="1.0.5"
         type="application/octet-stream"
       />
     </item>
