@@ -296,4 +296,14 @@ class DatabaseService {
 
   Future<int> deletarTextosFixosForaDe(Set<int> idsValidos) =>
       _deletarForaDe('textos_fixos', idsValidos);
+
+  Future<void> deleteTexto(int id) async {
+    final database = await db;
+    await database.delete('textos', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> deleteTextoFixo(int id) async {
+    final database = await db;
+    await database.delete('textos_fixos', where: 'id = ?', whereArgs: [id]);
+  }
 }
