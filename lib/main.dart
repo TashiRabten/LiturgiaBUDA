@@ -60,7 +60,7 @@ class LiturgiaBudaApp extends StatelessWidget {
             'https://raw.githubusercontent.com/TashiRabten/LiturgiaBUDA/main/appcast.xml',
       ),
     ),
-    daysUntilAlertAgain: 0,
+    durationUntilAlertAgain: Duration.zero,
   );
 
   @override
